@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robert DiMarco - Software Engineer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+            background: #0d1117;
+            color: #00ff41;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .terminal {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            max-width: 700px;
+            width: 100%;
+            overflow: hidden;
+            animation: powerOn 0.5s ease-out;
+        }
+
+        @keyframes powerOn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .terminal-header {
+            background: #2d2d2d;
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid #333;
+        }
+
+        .terminal-buttons {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .close { background: #ff5f56; }
+        .minimize { background: #ffbd2e; }
+        .maximize { background: #27ca3f; }
+
+        .terminal-title {
+            color: #c9c9c9;
+            font-size: 0.9rem;
+            margin-left: 1rem;
+        }
+
+        .terminal-body {
+            padding: 1.5rem;
+            min-height: 400px;
+        }
+
+        .prompt-line {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            animation: typein 0.8s ease-out forwards;
+        }
+
+        .prompt-line:nth-child(1) { animation-delay: 0.5s; }
+        .prompt-line:nth-child(2) { animation-delay: 1s; }
+        .prompt-line:nth-child(3) { animation-delay: 1.5s; }
+        .prompt-line:nth-child(4) { animation-delay: 2s; }
+        .prompt-line:nth-child(5) { animation-delay: 2.5s; }
+        .prompt-line:nth-child(6) { animation-delay: 3s; }
+        .prompt-line:nth-child(7) { animation-delay: 3.5s; }
+        .prompt-line:nth-child(8) { animation-delay: 4s; }
+        .prompt-line:nth-child(9) { animation-delay: 4.5s; }
+
+        @keyframes typein {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .prompt {
+            color: #ff6b6b;
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+
+        .command {
+            color: #4ecdc4;
+            margin-right: 0.5rem;
+        }
+
+        .output {
+            color: #00ff41;
+        }
+
+        .comment {
+            color: #6a737d;
+        }
+
+        .ascii-art {
+            color: #4ecdc4;
+            font-size: 0.8rem;
+            line-height: 1;
+            margin: 1rem 0;
+            white-space: pre;
+        }
+
+        .link-section {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #333;
+        }
+
+        .link-command {
+            display: block;
+            color: #4ecdc4;
+            text-decoration: none;
+            padding: 0.5rem 0;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            padding-left: 1rem;
+            margin-left: -1rem;
+        }
+
+        .link-command:hover {
+            background: rgba(0, 255, 65, 0.1);
+            border-left-color: #00ff41;
+            color: #00ff41;
+            transform: translateX(5px);
+        }
+
+        .cursor {
+            display: inline-block;
+            background: #00ff41;
+            width: 10px;
+            height: 1.2em;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .typing-effect {
+            overflow: hidden;
+            border-right: 2px solid #00ff41;
+            white-space: nowrap;
+            animation: typing 2s steps(30) 5s forwards, blink-cursor 1s infinite;
+            width: 0;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes blink-cursor {
+            0%, 50% { border-color: #00ff41; }
+            51%, 100% { border-color: transparent; }
+        }
+
+        .status {
+            color: #f39c12;
+        }
+
+        .success {
+            color: #27ae60;
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        @media (max-width: 600px) {
+            .terminal {
+                margin: 0.5rem;
+            }
+            
+            .terminal-body {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .ascii-art {
+                font-size: 0.6rem;
+            }
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff41, transparent);
+            animation: scan 3s linear infinite;
+            opacity: 0.3;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(-2px); }
+            100% { transform: translateY(100vh); }
+        }
+    </style>
+</head>
+<body>
+    <div class="scan-line"></div>
+    
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button close"></div>
+                <div class="terminal-button minimize"></div>
+                <div class="terminal-button maximize"></div>
+            </div>
+            <div class="terminal-title">rob@innovationontherun:~</div>
+        </div>
+        
+        <div class="terminal-body">
+            <div class="prompt-line">
+                <span class="prompt">rob@innovationontherun:~$</span>
+                <span class="command">whoami</span>
+            </div>
+            
+            <div class="prompt-line">
+                <span class="output">Rob Di Marco - Software Engineer | Engineering Manager | VP Engineering | CTO</span>
+            </div>
+            
+            <div class="prompt-line">
+                <span class="prompt">rob@innovationontherun:~$</span>
+                <span class="command">cat about.txt</span>
+            </div>
+            
+            <div class="prompt-line">
+                <div class="ascii-art">
+    ____        _      ____  _   __  __                     
+   |  _ \ ___  | |__  |  _ \(_) |  \/  | __ _ _ __ ___ ___  
+   | |_) / _ \ | '_ \ | | | | | | |\/| |/ _` | '__/ __/ _ \ 
+   |  _ < (_) || |_) || |_| | | | |  | | (_| | | | (_| (_) |
+   |_| \_\___/ |_.__/ |____/|_| |_|  |_|\__,_|_|  \___\___/
+                </div>
+            </div>
+            
+            <div class="prompt-line">
+                <span class="output">Engineering leader who gets things shipped.</span>
+            </div>
+            
+            <div class="prompt-line">
+                <span class="output">From code to C-suite - building teams & delivering products.</span>
+            </div>
+            
+            <div class="prompt-line">
+                <span class="prompt">rob@innovationontherun:~$</span>
+                <span class="command">ls -la social/</span>
+            </div>
+            
+            <div class="prompt-line">
+                <span class="status">total 2</span>
+            </div>
+            
+            <div class="link-section">
+                <a href="https://www.linkedin.com/in/robertcdimarco/" class="link-command" target="_blank" rel="noopener noreferrer">
+                    <span class="prompt">rob@innovationontherun:~$</span> 
+                    <span class="command">open</span> 
+                    <span class="output">linkedin</span>
+                    <span class="comment"># Professional network & experience</span>
+                </a>
+                
+                <a href="https://github.com/robdimarco" class="link-command" target="_blank" rel="noopener noreferrer">
+                    <span class="prompt">rob@innovationontherun:~$</span> 
+                    <span class="command">git clone</span> 
+                    <span class="output">github.com/robdimarco</span>
+                    <span class="comment"># Code repositories & projects</span>
+                </a>
+            </div>
+            
+            <div class="prompt-line" style="margin-top: 2rem;">
+                <span class="prompt">rob@innovationontherun:~$</span>
+                <span class="typing-effect">echo "Thanks for visiting!"</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
