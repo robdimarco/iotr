@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Try to Focus</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;min-height:100vh;background:#111;color:#eee;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;overflow-x:hidden}
+  h1{font-size:1.6rem;margin:0 0 8px}
+  p{color:#aaa;max-width:440px;line-height:1.4}
+  button{font-size:1.2rem;padding:16px 32px;margin:8px;border:none;border-radius:14px;cursor:pointer}
+  #start{background:#2ecc71;color:#111;font-weight:600}
+  #stop{background:#e74c3c;color:#fff}
+  button:disabled{opacity:.4}
+  .opts{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:center;margin:10px 0;color:#ccc}
+  .opts input[type=number]{width:64px;font-size:1rem;padding:4px;margin-left:6px}
+  #status{margin-top:14px;font-size:1.05rem;min-height:1.5em;color:#9ad}
+  #warn{color:#f1c40f;font-size:.95rem}
+  #setup.hidden{display:none}
+  /* fake notification */
+  #notif{position:fixed;left:50%;top:-140px;transform:translateX(-50%);width:min(92vw,400px);background:rgba(245,245,247,.97);color:#111;border-radius:18px;padding:12px 14px;display:flex;gap:12px;align-items:center;text-align:left;box-shadow:0 8px 30px rgba(0,0,0,.5);transition:top .35s cubic-bezier(.2,.9,.3,1.2);z-index:10}
+  #notif.show{top:calc(env(safe-area-inset-top,0px) + 12px)}
+  #notif .icon{width:40px;height:40px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px}
+  #notif .app{font-size:.75rem;color:#666;display:flex;justify-content:space-between}
+  #notif .who{font-weight:600;font-size:.95rem;margin-top:1px}
+  #notif .msg{font-size:.92rem;color:#222;margin-top:1px}
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+</style>
+</head>
+<body>
+  <div id="notif"><div class="icon" id="nIcon">💬</div><div style="flex:1;min-width:0"><div class="app"><span id="nApp">Messages</span><span>now</span></div><div class="who" id="nWho"></div><div class="msg" id="nMsg"></div></div></div>
+
+  <div id="setup" style="display:none">
+    <span id="warn"></span>
+    <input type="checkbox" id="optVib" checked><input type="checkbox" id="optSnd" checked><input type="checkbox" id="optPop" checked>
+    <input id="min" type="number" value="2"><input id="max" type="number" value="5">
+  </div>
+  <div>
+    <button id="start">Start</button>
+    <button id="stop" disabled>Stop</button>
+  </div>
+
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id);};
+  var canVibrate = typeof navigator.vibrate === 'function';
+  var timer = null, hideTimer = null, count = 0, audio = null, wakeLock = null;
+
+  if(!canVibrate){
+    $('warn').textContent = "Your phone can't vibrate from a web page, so you'll get sounds and pop-ups instead.";
+  }
+
+  var people = ['Mom','Jayden','Ava 💕','Coach','Group chat: Squad','Emma','Unknown','Liam','Sophia','Dad','Noah 🏀','Mia'];
+  var texts = ["did you see what she was wearing 💀", "omg they BROKE UP", "wait who told him??", "you're in the background of her story lol", "DON'T open the group chat", "someone just screenshotted your post 👀", "is it true about you and Jordan??", "everyone's talking about what happened at lunch", "she left you on read 😬", "ok I need to tell you something but you can't tell anyone", "he asked about you 👀👀", "why is your name trending in the group chat", "did you see the fight after school", "the teacher just posted grades", "you have to see what he commented on your pic", "they're officially dating now", "who's taking you to homecoming??", "lmaooo look at this video of you", "call me RIGHT NOW", "I heard what you said about her 😳", "are you mad at me?", "new drama just dropped 🍿", "you won't believe who just followed you", "party at Alex's friday, you in?", "delete that pic before anyone sees 😭"];
+  var apps = [
+    {name:'Messages',icon:'💬',bg:'#34c759'},
+    {name:'Snapchat',icon:'👻',bg:'#fffc00'},
+    {name:'Instagram',icon:'📷',bg:'#e1306c'},
+    {name:'TikTok',icon:'🎵',bg:'#111'},
+    {name:'Discord',icon:'🎮',bg:'#5865f2'}
+  ];
+  function pick(a){return a[Math.floor(Math.random()*a.length)];}
+  function rand(a,b){return a+Math.random()*(b-a);}
+
+  function vibrate(){
+    if(!canVibrate || !$('optVib').checked) return;
+    var pulses = 1+Math.floor(Math.random()*3), pattern=[];
+    for(var i=0;i<pulses;i++){pattern.push(Math.round(rand(80,400))); if(i<pulses-1) pattern.push(Math.round(rand(60,180)));}
+    navigator.vibrate(pattern);
+  }
+
+  function ding(){
+    if(!audio || !$('optSnd').checked) return;
+    var t = audio.currentTime;
+    var notes = Math.random()<.5 ? [1318.5,1760] : [880,1174.7,1568];
+    notes.forEach(function(f,i){
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type='sine'; o.frequency.value=f;
+      var s = t+i*0.11;
+      g.gain.setValueAtTime(0,s);
+      g.gain.linearRampToValueAtTime(0.35,s+0.01);
+      g.gain.exponentialRampToValueAtTime(0.001,s+0.35);
+      o.connect(g); g.connect(audio.destination);
+      o.start(s); o.stop(s+0.4);
+    });
+  }
+
+  function popup(){
+    if(!$('optPop').checked) return;
+    var app = pick(apps);
+    $('nApp').textContent = app.name;
+    $('nIcon').textContent = app.icon;
+    $('nIcon').style.background = app.bg;
+    $('nWho').textContent = pick(people);
+    $('nMsg').textContent = pick(texts);
+    var n = $('notif');
+    n.classList.add('show');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function(){n.classList.remove('show');}, 3500);
+  }
+
+  function interrupt(){
+    count++;
+    vibrate(); ding(); popup();
+    var b=document.body; b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+  }
+
+  function schedule(){
+    var mn = Math.max(0.5, parseFloat($('min').value)||2);
+    var mx = Math.max(mn, parseFloat($('max').value)||5);
+    timer = setTimeout(function(){ interrupt(); schedule(); }, rand(mn,mx)*1000);
+  }
+
+  async function keepAwake(){
+    try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+  }
+
+  $('start').onclick = function(){
+    if(timer) return;
+    try{
+      var AC = window.AudioContext||window.webkitAudioContext;
+      if(AC && !audio) audio = new AC();
+      if(audio && audio.state==='suspended') audio.resume();
+    }catch(e){}
+    count = 0;
+    keepAwake();
+    $('start').disabled = true; $('stop').disabled = false;
+    interrupt(); // first one inside the tap so the browser allows vibration and sound
+    schedule();
+  };
+
+  $('stop').onclick = function(){
+    clearTimeout(timer); timer = null;
+    if(canVibrate) navigator.vibrate(0);
+    $('notif').classList.remove('show');
+    if(wakeLock){ wakeLock.release().catch(function(){}); wakeLock=null; }
+    $('start').disabled = false; $('stop').disabled = true;
+  };
+
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && timer) keepAwake();
+  });
+})();
+</script>
+</body>
+</html>
