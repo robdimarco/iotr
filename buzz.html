@@ -32,6 +32,7 @@
 <body>
   <div id="notif"><div class="icon" id="nIcon">💬</div><div style="flex:1;min-width:0"><div class="app"><span id="nApp">Messages</span><span>now</span></div><div class="who" id="nWho"></div><div class="msg" id="nMsg"></div></div></div>
 
+  <label id="hapLabel" style="position:absolute;left:-9999px;opacity:0"><input type="checkbox" switch id="hap"></label>
   <div id="setup" style="display:none">
     <span id="warn"></span>
     <input type="checkbox" id="optVib" checked><input type="checkbox" id="optSnd" checked><input type="checkbox" id="optPop" checked>
@@ -65,8 +66,39 @@
   function pick(a){return a[Math.floor(Math.random()*a.length)];}
   function rand(a,b){return a+Math.random()*(b-a);}
 
+
+  // iOS: Safari has no vibrate(); tapping a switch control gives a haptic tick (iOS 18+, best effort)
+  function iosHaptic(){
+    if(canVibrate) return;
+    try{ $('hapLabel').click(); }catch(e){}
+  }
+  // iOS: web audio is muted by the silent switch unless the page is in "playback" mode.
+  var keepAlive = null;
+  function makeSilentWav(){
+    var rate=8000, n=rate, buf=new ArrayBuffer(44+n), v=new DataView(buf);
+    function str(o,t){for(var i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));}
+    str(0,'RIFF');v.setUint32(4,36+n,true);str(8,'WAVE');str(12,'fmt ');
+    v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+    v.setUint32(24,rate,true);v.setUint32(28,rate,true);v.setUint16(32,1,true);v.setUint16(34,8,true);
+    str(36,'data');v.setUint32(40,n,true);
+    for(var i=0;i<n;i++)v.setUint8(44+i,128);
+    return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+  }
+  function unlockAudio(){
+    try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+    try{
+      if(!keepAlive){
+        keepAlive=document.createElement('audio');
+        keepAlive.src=makeSilentWav(); keepAlive.loop=true;
+        keepAlive.setAttribute('playsinline','');
+      }
+      var pr=keepAlive.play(); if(pr&&pr.catch) pr.catch(function(){});
+    }catch(e){}
+  }
+
   function vibrate(){
-    if(!canVibrate || !$('optVib').checked) return;
+    if(!$('optVib').checked) return;
+    if(!canVibrate){ iosHaptic(); return; }
     var pulses = 1+Math.floor(Math.random()*3), pattern=[];
     for(var i=0;i<pulses;i++){pattern.push(Math.round(rand(80,400))); if(i<pulses-1) pattern.push(Math.round(rand(60,180)));}
     navigator.vibrate(pattern);
@@ -74,6 +106,7 @@
 
   function ding(){
     if(!audio || !$('optSnd').checked) return;
+    if(audio.state==='suspended') audio.resume();
     var t = audio.currentTime;
     var notes = Math.random()<.5 ? [1318.5,1760] : [880,1174.7,1568];
     notes.forEach(function(f,i){
@@ -120,6 +153,7 @@
 
   $('start').onclick = function(){
     if(timer) return;
+    unlockAudio();
     try{
       var AC = window.AudioContext||window.webkitAudioContext;
       if(AC && !audio) audio = new AC();
@@ -135,6 +169,7 @@
   $('stop').onclick = function(){
     clearTimeout(timer); timer = null;
     if(canVibrate) navigator.vibrate(0);
+    if(keepAlive) keepAlive.pause();
     $('notif').classList.remove('show');
     if(wakeLock){ wakeLock.release().catch(function(){}); wakeLock=null; }
     $('start').disabled = false; $('stop').disabled = true;
